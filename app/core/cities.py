@@ -1,43 +1,101 @@
-from rapidfuzz import process
+from rapidfuzz import fuzz
 
 
-VALID_CITIES = {
-
+CITIES = {
     "almaty": [
         "алматы",
-        "алмати",
         "алмата",
-        "almaty"
+        "almaty",
     ],
 
     "astana": [
         "астана",
-        "астан",
         "astana",
-        "нур-султан"
-    ],
-
-    "karaganda": [
-        "караганда",
-        "карагнда",
-        "karaganda"
+        "нур султан",
+        "нурсултан",
     ],
 
     "shymkent": [
         "шымкент",
-        "шимкент",
-        "shymkent"
+        "shymkent",
+    ],
+
+    "karaganda": [
+        "караганда",
+        "karagandy",
+        "karaganda",
     ],
 
     "aktau": [
         "актау",
-        "aktau"
+        "aktau",
     ],
 
     "atyrau": [
         "атырау",
-        "atyrau"
-    ]
+        "atyrau",
+    ],
+
+    "aktobe": [
+        "актобе",
+        "aktobe",
+    ],
+
+    "kostanay": [
+        "костанай",
+        "kostanai",
+        "kostanay",
+    ],
+
+    "kyzylorda": [
+        "кызылорда",
+        "kyzylorda",
+    ],
+
+    "oskemen": [
+        "усть каменогорск",
+        "усть-каменогорск",
+        "оскемен",
+        "ust kamenogorsk",
+        "oskemen",
+    ],
+
+    "pavlodar": [
+        "павлодар",
+        "pavlodar",
+    ],
+
+    "semey": [
+        "семей",
+        "semei",
+        "semey",
+    ],
+
+    "taraz": [
+        "тараз",
+        "taraz",
+    ],
+
+    "turkestan": [
+        "туркестан",
+        "turkestan",
+    ],
+
+    "oral": [
+        "уральск",
+        "oral",
+        "uralsk",
+    ],
+
+    "petropavlovsk": [
+        "петропавловск",
+        "petropavlovsk",
+    ],
+
+    "kokshetau": [
+        "кокшетау",
+        "kokshetau",
+    ],
 }
 
 
@@ -45,39 +103,39 @@ def normalize_city(
     user_input: str
 ):
 
-    user_input = (
+    if not user_input:
+        return None
+
+    text = (
         user_input
         .strip()
         .lower()
     )
 
-    all_variants = {}
+    # exact
+    for slug, aliases in CITIES.items():
 
-    for city_slug, variants in VALID_CITIES.items():
+        if text in aliases:
+            return slug
 
-        for variant in variants:
+    # fuzzy
+    best_score = 0
+    best_slug = None
 
-            all_variants[variant] = city_slug
+    for slug, aliases in CITIES.items():
 
-    match = process.extractOne(
-        user_input,
-        all_variants.keys()
-    )
+        for alias in aliases:
 
-    if not match:
-        return None
+            score = fuzz.ratio(
+                text,
+                alias
+            )
 
-    matched_text = match[0]
+            if score > best_score:
+                best_score = score
+                best_slug = slug
 
-    score = match[1]
+    if best_score >= 80:
+        return best_slug
 
-    # =====================================
-    # MIN CONFIDENCE
-    # =====================================
-
-    if score < 70:
-        return None
-
-    return all_variants[
-        matched_text
-    ]
+    return None

@@ -25,7 +25,8 @@ from app.scraper.phone_scraper import (
 )
 
 from app.messenger.sender import (
-    send_message
+    send_message,
+    request_callback
 )
 
 from app.services.scraper_service import (
@@ -38,6 +39,10 @@ from app.core.state import (
 
 from app.auth.auth_service import (
     is_logged_in
+)
+
+from app.bot.keyboards.listing_keyboard import (
+    listing_keyboard
 )
 
 router = Router()
@@ -64,8 +69,9 @@ async def callback_handler(
 
     if user_id in active_users:
 
-        await callback.message.answer(
-            "⏳ Дождитесь завершения предыдущей операции"
+        await callback.answer(
+            "⏳ Подождите",
+            show_alert=False
         )
 
         return
@@ -75,17 +81,39 @@ async def callback_handler(
     try:
 
         # =====================================
+        # EDIT TYPE
+        # =====================================
+
+        if data == "edit_type":
+
+            await state.set_state(
+                ProfileStates.waiting_type
+            )
+
+            await callback.message.answer(
+                "🏠 Тип недвижимости\n\n"
+                "Доступно:\n"
+                "• квартира\n"
+                "• дом"
+            )
+
+            return
+
+        # =====================================
         # EDIT CITY
         # =====================================
 
-        if data == "edit_city":
+        elif data == "edit_city":
 
             await state.set_state(
                 ProfileStates.waiting_city
             )
 
             await callback.message.answer(
-                "📍 Введите новый город:"
+                "📍 Введите город\n\n"
+                "Например:\n"
+                "Алматы\n"
+                "Астана"
             )
 
             return
@@ -101,8 +129,11 @@ async def callback_handler(
             )
 
             await callback.message.answer(
-                "🏠 Введите комнаты:\n"
-                "Например: 2,3,4"
+                "🛏 Введите комнаты\n\n"
+                "Примеры:\n"
+                "234\n"
+                "2,3\n"
+                "2-4"
             )
 
             return
@@ -118,7 +149,47 @@ async def callback_handler(
             )
 
             await callback.message.answer(
-                "💰 Введите максимальную цену:"
+                "💰 Введите максимальную цену\n\n"
+                "Пример:\n"
+                "30000000"
+            )
+
+            return
+
+        # =====================================
+        # EDIT AREA
+        # =====================================
+
+        elif data == "edit_area":
+
+            await state.set_state(
+                ProfileStates.waiting_area
+            )
+
+            await callback.message.answer(
+                "📐 Введите площадь\n\n"
+                "Примеры:\n"
+                "45\n"
+                "40-80"
+            )
+
+            return
+
+        # =====================================
+        # EDIT FLOOR
+        # =====================================
+
+        elif data == "edit_floor":
+
+            await state.set_state(
+                ProfileStates.waiting_floor
+            )
+
+            await callback.message.answer(
+                "🏢 Введите этаж\n\n"
+                "Примеры:\n"
+                "3\n"
+                "2-5"
             )
 
             return
@@ -136,8 +207,9 @@ async def callback_handler(
 
             if not profiles:
 
-                await callback.message.answer(
-                    "❌ Профиль не найден"
+                await callback.answer(
+                    "❌ Профиль не найден",
+                    show_alert=True
                 )
 
                 return
@@ -145,17 +217,38 @@ async def callback_handler(
             profile = profiles[0]
 
             status_message = await callback.message.answer(
-                "🔍 Запускаю поиск..."
+                "🔍 Ищу объявления..."
             )
 
-            count = await run_scraper(
+            listings = await run_scraper(
                 profile
             )
 
-            await status_message.edit_text(
-                f"✅ Обработано объявлений: "
-                f"{count}"
-            )
+            await status_message.delete()
+
+            if not listings:
+
+                await callback.answer(
+                    "❌ Объявления не найдены",
+                    show_alert=True
+                )
+
+                return
+
+            for item in listings:
+
+                text = (
+                    f"🏠 {item.title}\n"
+                    f"💰 {item.price:,} ₸\n"
+                    f"📍 {item.address}"
+                )
+
+                await callback.message.answer(
+                    text,
+                    reply_markup=listing_keyboard(
+                        item.krisha_id
+                    )
+                )
 
         # =====================================
         # PHONE CALLBACK
@@ -217,8 +310,7 @@ async def callback_handler(
                 await stop_browser()
 
                 await status_message.edit_text(
-                    "❌ Аккаунт Krisha разлогинен\n"
-                    "Перелогиньтесь через main.py"
+                    "❌ Аккаунт Krisha разлогинен"
                 )
 
                 return
@@ -312,8 +404,7 @@ async def callback_handler(
                 await stop_browser()
 
                 await status_message.edit_text(
-                    "❌ Аккаунт Krisha разлогинен\n"
-                    "Перелогиньтесь через main.py"
+                    "❌ Аккаунт Krisha разлогинен"
                 )
 
                 return
@@ -342,7 +433,15 @@ async def callback_handler(
             elif result == "CALLBACK_ONLY":
 
                 await status_message.edit_text(
-                    "☎ Доступен только обратный звонок"
+                    "☎ Чат недоступен"
+                )
+
+                await callback.message.answer(
+                    "📲 Можно запросить обратный звонок",
+                    reply_markup=listing_keyboard(
+                        listing.krisha_id,
+                        callback_only=True
+                    )
                 )
 
             elif result == "NO_CHAT":
@@ -355,6 +454,68 @@ async def callback_handler(
 
                 await status_message.edit_text(
                     "❌ Не удалось отправить"
+                )
+
+        # =====================================
+        # REQUEST CALLBACK
+        # =====================================
+
+        elif data.startswith(
+            "request_callback:"
+        ):
+
+            krisha_id = int(
+                data.split(":")[1]
+            )
+
+            listings = (
+                ListingRepository.get_all()
+            )
+
+            listing = None
+
+            for item in listings:
+
+                if item.krisha_id == krisha_id:
+                    listing = item
+                    break
+
+            if not listing:
+
+                await callback.answer(
+                    "❌ Объявление не найдено",
+                    show_alert=True
+                )
+
+                return
+
+            await callback.answer(
+                "📲 Отправляю запрос..."
+            )
+
+            await start_browser()
+
+            page = await get_page()
+
+            result = await request_callback(
+                page,
+                listing
+            )
+
+            await stop_browser()
+
+            if result == "SUCCESS":
+
+                await callback.answer(
+                    "✅ Запрос отправлен",
+                    show_alert=True
+                )
+
+            else:
+
+                await callback.answer(
+                    "❌ Не удалось отправить",
+                    show_alert=True
                 )
 
     finally:

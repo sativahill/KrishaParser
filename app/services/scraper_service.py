@@ -58,9 +58,9 @@ async def run_scraper(profile):
         html
     )
 
-    listings = listings[:3]
+    listings = listings[:5]
 
-    saved_count = 0
+    saved_listings = []
 
     for listing in listings:
 
@@ -80,8 +80,10 @@ async def run_scraper(profile):
             detailed_listing
         )
 
-        saved_count += 1
+        saved_listings.append(
+            detailed_listing
+        )
 
     await stop_browser()
 
-    return saved_count
+    return saved_listings

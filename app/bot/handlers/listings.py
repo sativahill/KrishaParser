@@ -10,7 +10,7 @@ from app.services.scraper_service import (
     run_scraper
 )
 
-from app.bot.keyboards.listing_keyboards import (
+from app.bot.keyboards.listing_keyboard import (
     listing_keyboard
 )
 

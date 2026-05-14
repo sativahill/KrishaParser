@@ -190,3 +190,66 @@ async def send_message(
         )
 
         return "ERROR"
+    
+async def request_callback(
+    page,
+    listing
+):
+
+    try:
+
+        await page.goto(
+            listing.url,
+            wait_until="domcontentloaded",
+            timeout=20000
+        )
+
+        await page.wait_for_timeout(5000)
+
+        callback_button_texts = [
+            "Заказать обратный звонок",
+            "Обратный звонок"
+        ]
+
+        clicked = False
+
+        for text in callback_button_texts:
+
+            try:
+
+                button = page.get_by_text(
+                    text,
+                    exact=False
+                )
+
+                if await button.count() > 0:
+
+                    await button.first.click()
+
+                    clicked = True
+
+                    break
+
+            except:
+                pass
+
+        if not clicked:
+
+            return "NOT_FOUND"
+
+        await page.wait_for_timeout(3000)
+
+        app_logger.success(
+            f"Callback requested: "
+            f"{listing.krisha_id}"
+        )
+
+        return "SUCCESS"
+
+    except Exception as e:
+
+        app_logger.error(
+            f"Callback request error: {e}"
+        )
+
+        return "ERROR"

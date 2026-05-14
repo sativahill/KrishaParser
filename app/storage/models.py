@@ -55,3 +55,11 @@ class SearchProfile(
     price_to: int
 
     who: int = 1
+
+    property_type: str = "kvartiry"
+
+    min_floor: int | None = None
+    max_floor: int | None = None
+
+    min_area: int | None = None
+    max_area: int | None = None

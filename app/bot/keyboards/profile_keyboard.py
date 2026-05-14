@@ -11,22 +11,43 @@ def profile_keyboard():
 
             [
                 InlineKeyboardButton(
-                    text="✏ Город",
+                    text="🏠 Тип",
+                    callback_data="edit_type"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    text="📍 Город",
                     callback_data="edit_city"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    text="✏ Комнаты",
+                    text="🛏 Комнаты",
                     callback_data="edit_rooms"
                 )
             ],
 
             [
                 InlineKeyboardButton(
-                    text="✏ Цена",
+                    text="💰 Цена",
                     callback_data="edit_price"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    text="📐 Площадь",
+                    callback_data="edit_area"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    text="🏢 Этаж",
+                    callback_data="edit_floor"
                 )
             ],
 
