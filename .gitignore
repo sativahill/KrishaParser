@@ -1,0 +1,9 @@
+venv/
+**pycache**/
+*.pyc
+
+data/session/profile/
+data/logs/
+data/exports/
+
+.env
